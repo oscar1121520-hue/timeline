@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>台灣歷史排序遊戲</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f4f4; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; }
+        .item { padding: 10px; margin: 5px; background: #e0e0e0; cursor: pointer; border-radius: 5px; text-align: center; }
+        .item:hover { background: #d0d0d0; }
+        .slot { border: 2px dashed #bbb; padding: 10px; margin: 5px; min-height: 20px; border-radius: 5px; display: flex; align-items: center; }
+        .year { font-weight: bold; width: 80px; }
+        .correct { background: #d4edda !important; border-color: #28a745; }
+    </style>
+</head>
+<body>
+    <h2>台灣 17 世紀歷史排序</h2>
+    <p>請點擊下方的事件，依序填入正確的時間軸：</p>
+    <div id="options" class="container"></div>
+    <div id="timeline" class="container" style="margin-top: 20px;"></div>
+
+    <script>
+        const data = [
+            { year: "1624", event: "荷蘭人佔領南部" },
+            { year: "1626", event: "西班牙人佔領北部" },
+            { year: "1642", event: "荷蘭人北上驅逐西班牙人" },
+            { year: "1652", event: "郭懷一事件" },
+            { year: "1661", event: "鄭成功由澎湖開始攻進台灣" },
+            { year: "1662", event: "鄭成功擊敗荷蘭人" },
+            { year: "1684", event: "台灣成為清帝國領土" }
+        ];
+
+        let shuffled = [...data].sort(() => Math.random() - 0.5);
+        const optionsDiv = document.getElementById('options');
+        const timelineDiv = document.getElementById('timeline');
+
+        // 初始化選項
+        shuffled.forEach(item => {
+            let div = document.createElement('div');
+            div.className = 'item';
+            div.innerText = item.event;
+            div.onclick = () => selectEvent(item, div);
+            optionsDiv.appendChild(div);
+        });
+
+        // 初始化時間軸空格
+        data.forEach(item => {
+            let row = document.createElement('div');
+            row.className = 'slot';
+            row.innerHTML = `<span class="year">${item.year}年:</span> <span id="target-${item.year}">______</span>`;
+            timelineDiv.appendChild(row);
+        });
+
+        let currentIndex = 0;
+        function selectEvent(item, element) {
+            if (item.year === data[currentIndex].year) {
+                document.getElementById(`target-${item.year}`).innerText = item.event;
+                document.getElementById(`target-${item.year}`).parentElement.classList.add('correct');
+                element.style.display = 'none';
+                currentIndex++;
+                if (currentIndex === data.length) alert("恭喜你完成挑戰！");
+            } else {
+                alert("順序不對喔，再試試看！");
+            }
+        }
+    </script>
+</body>
+</html>
