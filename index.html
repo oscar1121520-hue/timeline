@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣歷史一次性挑戰</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f8f9fa;
+        }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background-color: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; margin-bottom: 20px; }
+        h1 { font-size: 1.4rem; text-align: center; margin-bottom: 10px; }
+        .status-bar { text-align: center; font-weight: bold; margin-bottom: 15px; color: var(--accent); }
+        
+        /* 選項區 */
+        #options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 50px; border: 1px dashed #ccc; padding: 15px; border-radius: 8px; }
+        .item { background: white; border: 2px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; }
+        .item:hover { background: var(--accent); color: white; }
+        .item.selected { opacity: 0.3; cursor: not-allowed; background: #eee; border-color: #ccc; color: #999; }
+
+        /* 時間軸區 */
+        .slot { display: flex; align-items: center; margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .slot:hover { border-color: var(--accent); background: #f0f7ff; }
+        .slot.locked { cursor: default; background: #fdfdfd; }
+        .year-label { font-weight: bold; width: 70px; font-size: 1.1rem; }
+        .answer-text { flex-grow: 1; color: #888; border-left: 2px solid #eee; padding-left: 15px; }
+        
+        /* 結果樣式 */
+        .res-correct { color: var(--success) !important; font-weight: bold; }
+        .res-wrong { color: var(--error) !important; text-decoration: line-through; }
+        .correct-ans { font-size: 0.8rem; color: var(--success); display: block; }
+
+        #result-btn { display: none; width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>🇹🇼 17世紀台灣史排序挑戰</h1>
+        <div class="status-bar" id="status">請先點擊下方「事件」，再點擊對應的「年份」</div>
+        <div id="options"></div>
+    </div>
+
+    <div class="card">
+        <div id="timeline"></div>
+        <button id="result-btn" onclick="showFinalResult()">查看最終分數</button>
+        <button id="reset-btn" onclick="location.reload()" style="margin-top:10px; width:100%; padding:10px; background:#95a5a6; color:white; border:none; border-radius:8px; cursor:pointer;">重新開始遊戲</button>
+    </div>
+
+    <script>
+        const data = [
+            { year: "1624", event: "荷蘭人佔領南部" },
+            { year: "1626", event: "西班牙人佔領北部" },
+            { year: "1642", event: "荷蘭人北上驅逐西班牙人" },
+            { year: "1652", event: "郭懷一事件" },
+            { year: "1661", event: "鄭成功由澎湖開始攻進台灣" },
+            { year: "1662", event: "鄭成功擊敗荷蘭人" },
+            { year: "1684", event: "台灣成為清帝國領土" }
+        ];
+
+        let selectedEvent = null;
+        let selectedElement = null;
+        let answeredCount = 0;
+        let userAnswers = {}; // 儲存格式: { "1624": "事件名稱" }
+
+        function init() {
+            const optionsDiv = document.getElementById('options');
+            const timelineDiv = document.getElementById('timeline');
+
+            // 隨機打亂事件
+            [...data].sort(() => Math.random() - 0.5).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerText = item.event;
+                div.onclick = () => {
+                    if (div.classList.contains('selected')) return;
+                    // 取消之前選中的高亮
+                    if (selectedElement) selectedElement.style.background = "white";
+                    if (selectedElement) selectedElement.style.color = "var(--accent)";
+                    
+                    selectedEvent = item.event;
+                    selectedElement = div;
+                    div.style.background = "var(--accent)";
+                    div.style.color = "white";
+                    document.getElementById('status').innerText = `已選取：「${selectedEvent}」，請選擇年份`;
+                };
+                optionsDiv.appendChild(div);
+            });
+
+            // 建立年份槽
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'slot';
+                div.id = `slot-${item.year}`;
+                div.innerHTML = `<span class="year-label">${item.year}</span><span class="answer-text" id="text-${item.year}">尚未選擇...</span>`;
+                div.onclick = () => fillAnswer(item.year, div);
+                timelineDiv.appendChild(div);
+            });
+        }
+
+        function fillAnswer(year, slotElement) {
+            if (!selectedEvent || slotElement.classList.contains('locked')) return;
+
+            // 填入答案
+            userAnswers[year] = selectedEvent;
+            document.getElementById(`text-${year}`).innerText = selectedEvent;
+            document.getElementById(`text-${year}`).style.color = "#333";
+            document.getElementById(`text-${year}`).style.fontStyle = "normal";
+
+            // 鎖定狀態
+            slotElement.classList.add('locked');
+            selectedElement.classList.add('selected');
+            selectedElement.style.background = "#eee";
+            
+            // 重設選取器
+            selectedEvent = null;
+            selectedElement = null;
+            answeredCount++;
+            document.getElementById('status').innerText = `已填寫 ${answeredCount} / ${data.length}`;
+
+            if (answeredCount === data.length) {
+                document.getElementById('result-btn').style.display = 'block';
+                document.getElementById('status').innerText = "全部填寫完畢，請提交！";
+            }
+        }
+
+        function showFinalResult() {
+            let score = 0;
+            data.forEach(item => {
+                const textEl = document.getElementById(`text-${item.year}`);
+                const slotEl = document.getElementById(`slot-${item.year}`);
+                
+                if (userAnswers[item.year] === item.event) {
+                    score++;
+                    textEl.className = "answer-text res-correct";
+                    textEl.innerText = "✓ " + userAnswers[item.year];
+                } else {
+                    textEl.className = "answer-text res-wrong";
+                    textEl.innerHTML = `✕ ${userAnswers[item.year]} <span class="correct-ans">正確答案：${item.event}</span>`;
+                }
+            });
+
+            document.getElementById('result-btn').style.display = 'none';
+            document.getElementById('status').innerHTML = `測驗結束！您的得分：<span style="font-size:1.5rem; color:var(--error)">${score} / ${data.length}</span>`;
+            window.scrollTo(0, 0);
+        }
+
+        init();
+    </script>
+</body>
+</html>
